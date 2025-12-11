@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Sản Lượng Cao Su - TNSR 2025</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1a472a 0%, #2d6a4f 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        /* subtitle removed per request; kept class in case used elsewhere */
+        
+        .timestamp {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .tabs {
+            display: flex;
+            background-color: #f9f9f9;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 0 30px;
+        }
+
+        /* When tabs are placed inside the header */
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header .tabs {
+            background-color: transparent;
+            border-bottom: none;
+            padding: 0;
+        }
+
+        .header .tab-button {
+            padding: 8px 14px;
+            color: rgba(255,255,255,0.9);
+            border-bottom: none;
+            background: transparent;
+            border-radius: 6px;
+        }
+
+        .header .tab-button.active {
+            color: white;
+            background-color: rgba(255,255,255,0.08);
+            border-bottom: none;
+        }
+
+        .header .tab-button:hover {
+            background-color: rgba(255,255,255,0.06);
+        }
+        
+        .tab-button {
+            padding: 15px 25px;
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-button.active {
+            color: white;
+            background-color: #1a472a;
+            border-bottom: 3px solid #4CAF50;
+        }
+        
+        .tab-button:hover {
+            background-color: rgba(26, 71, 42, 0.1);
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .kpi-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .kpi-card {
+            background: white;
+            border-left: 4px solid #1a472a;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .kpi-card.total { border-left-color: #ff9800; }
+        .kpi-card.dientsich { border-left-color: #e91e63; }
+        .kpi-card.socay { border-left-color: #4caf50; }
+        .kpi-card.nangxuat { border-left-color: #ff9800; }
+        .kpi-card.hieuxuat { border-left-color: #f44336; }
+        .kpi-card.tbcay { border-left-color: #2196f3; }
+        
+        .kpi-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        
+        .kpi-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a472a;
+            margin-bottom: 5px;
+        }
+        
+        .kpi-unit {
+            font-size: 11px;
+            color: #ccc;
+        }
+
+        .kpi-delta {
+            font-size: 12px;
+            margin-top: 6px;
+            display: block;
+        }
+
+        .kpi-delta.up { color: #2e7d32; }
+        .kpi-delta.down { color: #c62828; }
+        
+        .section-title {
+            background-color: #1a472a;
+            color: white;
+            padding: 15px 20px;
+            margin: 30px 0 20px 0;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .heatmap-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+        }
+        
+        .heatmap-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            min-width: 900px;
+        }
+        
+        .heatmap-table th, .heatmap-table td {
+            padding: 10px 8px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            min-width: 90px;
+        }
+        
+        .heatmap-table th {
+            background-color: #1a472a;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .heatmap-table td:first-child {
+            text-align: left;
+            font-weight: 600;
+            background-color: #f5f5f5;
+            min-width: 60px;
+        }
+        
+        .heatmap-cell {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .chart-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a472a;
+            margin-bottom: 15px;
+        }
+        
+        .chart-wrapper {
+            height: 400px;
+            position: relative;
+        }
+
+        /* Small chart variant for compact visuals (used for staff chart) */
+        .chart-wrapper.small {
+            height: 220px;
+        }
+        
+        .chart-wrapper canvas {
+            max-height: 100%;
+        }
+
+        /* Weekly staff table conditional colors and average bar */
+        .week-cell {
+            text-align: center;
+            padding: 8px 6px;
+            font-weight: 600;
+        }
+
+        .avg-bar {
+            display: inline-block;
+            width: 140px;
+            height: 12px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            overflow: hidden;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        .avg-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #2e7d32);
+            width: 0%;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        
+        .data-table th {
+            background-color: #1a472a;
+            color: white;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .data-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .data-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .data-table tr:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .status-excellent { color: #4caf50; font-weight: 600; }
+        .status-good { color: #8bc34a; font-weight: 600; }
+        .status-fair { color: #ff9800; font-weight: 600; }
+        .status-poor { color: #f44336; font-weight: 600; }
+        
+        .detail-selector {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .detail-selector label {
+            font-weight: 600;
+            color: #1a472a;
+            margin-right: 15px;
+            display: inline-block;
+        }
+        
+        .detail-selector select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 300px;
+            background-color: white;
+        }
+        
+        .detail-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .detail-card {
+            background: linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%);
+            padding: 15px;
+            border-left: 4px solid #1a472a;
+            border-radius: 5px;
+        }
+        
+        .detail-label {
+            font-size: 11px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        
+        .detail-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a472a;
+        }
+        
+        .detail-unit {
+            font-size: 10px;
+            color: #ccc;
+            margin-top: 3px;
+        }
+
+        /* Footer percent change removed (per user request) */
+        
+        .staff-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .staff-name {
+            font-weight: 600;
+            color: #1a472a;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        .staff-stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+            .kpi-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .header {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Dashboard Sản Lượng Cao Su - TNSR 2025</h1>
+            </div>
+            <div class="header-right">
+                <div class="tabs header-tabs">
+                    <button class="tab-button active" onclick="switchTab(0)">TỔNG QUAN</button>
+                    <button class="tab-button" onclick="switchTab(1)">CHI TIẾT LÔ</button>
+                </div>
+                <div class="timestamp" id="timestamp"></div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- TAB 1: TỔNG QUAN -->
+            <div class="tab-content active">
+                <!-- KPI Cards -->
+                <div class="kpi-cards">
+                    <div class="kpi-card total">
+                        <div class="kpi-label">🏆 Tổng Sản Lượng</div>
+                        <div class="kpi-value" id="kpi-total">37.658</div>
+                        <div class="kpi-unit">tấn</div>
+                        <div class="kpi-delta" id="kpi-total-delta"></div>
+                    </div>
+                    <div class="kpi-card dientsich">
+                        <div class="kpi-label">🌳 Tổng Diện Tích</div>
+                        <div class="kpi-value" id="kpi-area">142,2</div>
+                        <div class="kpi-unit">ha</div>
+                        <div class="kpi-delta" id="kpi-area-delta"></div>
+                    </div>
+                    <div class="kpi-card socay">
+                        <div class="kpi-label">🌿 Tổng Số Cây</div>
+                        <div class="kpi-value" id="kpi-trees">59.662</div>
+                        <div class="kpi-unit">cây</div>
+                        <div class="kpi-delta" id="kpi-trees-delta"></div>
+                    </div>
+                    <div class="kpi-card nangxuat">
+                        <div class="kpi-label">📊 Năng Xuất</div>
+                        <div class="kpi-value" id="kpi-productivity">265</div>
+                        <div class="kpi-unit">kg/ha</div>
+                        <div class="kpi-delta" id="kpi-productivity-delta"></div>
+                    </div>
+                    <div class="kpi-card hieuxuat">
+                        <div class="kpi-label">✂️ Hiệu Xuất</div>
+                        <div class="kpi-value" id="kpi-efficiency">7,98</div>
+                        <div class="kpi-unit">kg/nhát</div>
+                        <div class="kpi-delta" id="kpi-efficiency-delta"></div>
+                    </div>
+                    <div class="kpi-card tbcay">
+                        <div class="kpi-label">🎯 TB/Cây</div>
+                        <div class="kpi-value" id="kpi-pertree">0,63</div>
+                        <div class="kpi-unit">kg/cây</div>
+                        <div class="kpi-delta" id="kpi-pertree-delta"></div>
+                    </div>
+                </div>
+                
+                <!-- Phân Tích Theo Tháng -->
+                <div class="section-title">📅 Phân Bổ Sản Lượng Theo Tháng</div>
+                <div class="charts-row">
+                    <div class="chart-container">
+                        <div class="chart-title">📊 Sản Lượng Tháng & Kế Hoạch</div>
+                        <div class="chart-wrapper"><canvas id="monthlyComparisonChart"></canvas></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">📈 Phân Tích Năng Suất Theo Tháng</div>
+                        <div class="chart-wrapper"><canvas id="monthlyProductivityChart"></canvas></div>
+                    </div>
+                </div>
+                
+                <!-- Heatmap -->
+                <div class="section-title">🔥 Heatmap Hiệu Suất Tổ × Khu Vực (kg/ha)</div>
+                <div class="heatmap-container">
+                    <table class="heatmap-table">
+                        <thead>
+                            <tr>
+                                <th>Tổ / Khu</th>
+                                <th>Khu Vực 1</th>
+                                <th>Khu Vực 2</th>
+                                <th>Khu Vực 3</th>
+                                <th>Khu Vực 4</th>
+                                <th>Khu Vực 5</th>
+                            </tr>
+                        </thead>
+                        <tbody id="heatmapBody">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Charts -->
+                <div class="charts-row">
+                    <div class="chart-container">
+                        <div class="chart-title">🏆 Sản Lượng Theo Lô (Top 8)</div>
+                        <div class="chart-wrapper"><canvas id="lotProductionChart"></canvas></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">🌳 Sản Lượng Theo Dòng Cây</div>
+                        <div class="chart-wrapper"><canvas id="cloneProductionChart"></canvas></div>
+                    </div>
+                </div>
+                
+                <div class="table-responsive" style="margin-top: 20px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Tháng</th>
+                                <th>Sản Lượng (kg)</th>
+                                <th>Diện Tích (ha)</th>
+                                <th>Số Cây</th>
+                                <th>kg/ha</th>
+                                <th>kg/cây</th>
+                                <th>Tổng Nhát</th>
+                                <th>kg/Nhát</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthlyHistoryTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="section-title">🏅 Top 10 Lô Hàng Đầu</div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Lô</th>
+                                <th>Sản Lượng (kg)</th>
+                                <th>Diện Tích (ha)</th>
+                                <th>Số Cây</th>
+                                <th>kg/ha</th>
+                                <th>kg/cây</th>
+                                <th>kg/nhát</th>
+                                <th>Xếp Hạng</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lotTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- TAB 2: CHI TIẾT LÔ -->
+            <div class="tab-content">
+                <!-- Chọn Lô để Xem Chi Tiết -->
+                <div class="detail-selector">
+                    <label>🌳 CHỌN LÔ ĐỂ XEM CHI TIẾT</label>
+                    <select id="lotSelector" onchange="updateLotDetail()">
+                        <option>L8 (Khu 1, Tổ 1)</option>
+                    </select>
+                    <div class="detail-info" id="lotDetailInfo">
+                    </div>
+                </div>
+                
+                <!-- Phân Tích Nhân Sự -->
+                <div class="section-title">👥 Phân Tích Nguồn Lực Theo Nhân Sự</div>
+                <div class="charts-row">
+                    <div class="chart-container" style="height: 220px;">
+                            <div class="chart-title">🥛 Mủ Tươi Theo Nhân Sự</div>
+                            <div class="chart-wrapper small"><canvas id="staffProductionChart"></canvas></div>
+                        </div>
+                        <div class="chart-container" style="height: 220px;">
+                            <div style="padding: 10px; overflow-y: auto; height: 100%;">
+                            <table class="data-table" style="font-size: 11px;">
+                                <thead>
+                                    <tr>
+                                        <th>Nhân Sự</th>
+                                        <th>Tổ</th>
+                                        <th>Tổng Nhát</th>
+                                        <th>Sản Lượng (kg)</th>
+                                        <th>Hiệu Suất</th>
+                                        <th>Đánh Giá</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="staffTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section-title">📈 Phân Tích Sản Lượng Theo Tháng</div>
+                <div class="charts-row">
+                    <div class="chart-container">
+                        <div class="chart-title">📊 Sản Lượng</div>
+                        <div class="chart-wrapper"><canvas id="detailMonthlyProductionChart"></canvas></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">🌿 Năng Suất (kg/ha)</div>
+                        <div class="chart-wrapper"><canvas id="detailMonthlyProductivityChart"></canvas></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">✂️ Hiệu Suất Cao (kg/nhát)</div>
+                        <div class="chart-wrapper"><canvas id="detailMonthlyEfficiencyChart"></canvas></div>
+                    </div>
+                </div>
+                
+                <div class="section-title">📊 Phân Bổ Sản Lượng Theo Tuần Trước Nhân Sự</div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nhân Sự</th>
+                                <th>Tuần 1</th>
+                                <th>Tuần 2</th>
+                                <th>Tuần 3</th>
+                                <th>Tuần 4</th>
+                                <th>Tuần 5</th>
+                                <th>Tuần 6</th>
+                                <th>Trung Bình</th>
+                            </tr>
+                        </thead>
+                        <tbody id="weeklyStaffTableBody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Detailed efficiency table removed per user request -->
+            </div>
+        </div>
+        
+        <!-- Footer removed per user request -->
+    </div>
+    
+    <script>
+        // ===== DATA =====
+        const lotData = [
+            {name: 'L8', area: 1, group: 1, clonevar: 'RRIC 121', areaHa: 24.70, trees: 11752, tappings: 810, production: 6480},
+            {name: 'G5', area: 1, group: 2, clonevar: 'RRIV 124', areaHa: 19.4, trees: 9281, tappings: 650, production: 5040},
+            {name: 'K4', area: 1, group: 3, clonevar: 'RRIV 1', areaHa: 16.1, trees: 7698, tappings: 550, production: 4160},
+            {name: 'J3', area: 1, group: 4, clonevar: 'RRIM 600', areaHa: 12.5, trees: 5985, tappings: 440, production: 3280},
+            
+            {name: 'A0', area: 2, group: 5, clonevar: 'RRIC 121', areaHa: 12.0, trees: 5748, tappings: 400, production: 3120},
+            {name: 'K3', area: 2, group: 6, clonevar: 'RRIV 124', areaHa: 11.5, trees: 5505, tappings: 385, production: 3060},
+            {name: 'M2', area: 2, group: 7, clonevar: 'RRIV 1', areaHa: 10.2, trees: 4885, tappings: 340, production: 2160},
+            {name: 'G3', area: 2, group: 8, clonevar: 'RRIM 600', areaHa: 8.1, trees: 3878, tappings: 270, production: 1980},
+            
+            {name: 'M1', area: 3, group: 1, clonevar: 'RRIC 121', areaHa: 18.3, trees: 8768, tappings: 610, production: 5040},
+            {name: 'I2', area: 3, group: 2, clonevar: 'RRIV 124', areaHa: 14.2, trees: 6805, tappings: 475, production: 3800},
+            {name: 'A5', area: 3, group: 3, clonevar: 'RRIV 1', areaHa: 13.5, trees: 6470, tappings: 450, production: 3420},
+            {name: 'D11', area: 3, group: 4, clonevar: 'RRIM 600', areaHa: 10.0, trees: 4792, tappings: 335, production: 2680},
+            
+            {name: 'C8', area: 4, group: 5, clonevar: 'RRIC 121', areaHa: 22.1, trees: 10585, tappings: 735, production: 6020},
+            {name: 'A2', area: 4, group: 6, clonevar: 'RRIV 124', areaHa: 16.8, trees: 8049, tappings: 560, production: 4480},
+            {name: 'A1', area: 4, group: 7, clonevar: 'RRIV 1', areaHa: 14.5, trees: 6946, tappings: 485, production: 3880},
+            {name: 'F1', area: 4, group: 8, clonevar: 'RRIM 600', areaHa: 11.3, trees: 5412, tappings: 375, production: 3000},
+            
+            {name: 'L4', area: 5, group: 9, clonevar: 'RRIC 121', areaHa: 20.9, trees: 10012, tappings: 695, production: 5540},
+            {name: 'J1', area: 5, group: 10, clonevar: 'RRIV 124', areaHa: 15.7, trees: 7524, tappings: 525, production: 4200},
+            {name: 'G6', area: 5, group: 1, clonevar: 'RRIV 1', areaHa: 13.2, trees: 6323, tappings: 440, production: 3520},
+            {name: 'E8', area: 5, group: 2, clonevar: 'RRIM 600', areaHa: 9.8, trees: 4693, tappings: 330, production: 2640}
+        ];
+        
+        const heatmapData = [
+            [790, 720, 750, 735, 680],
+            [750, 680, 710, 695, 660],
+            [720, 650, 685, 670, 640],
+            [725, 700, 740, 715, 690],
+            [620, 640, 660, 645, 620],
+            [680, 660, 675, 658, 605],
+            [750, 710, 725, 695, 650],
+            [710, 680, 690, 670, 635],
+            [680, 660, 670, 645, 610]
+        ];
+        
+        const monthlyData = [
+            {month: 'Tháng 1', production: 6450, tappings: 8063, efficiency: 0.80, productivity: 45, target: 93},
+            {month: 'Tháng 2', production: 7134, tappings: 8918, efficiency: 0.80, productivity: 50, target: 103},
+            {month: 'Tháng 3', production: 7041, tappings: 8801, efficiency: 0.80, productivity: 50, target: 102},
+            {month: 'Tháng 4', production: 7054, tappings: 8818, efficiency: 0.80, productivity: 50, target: 102},
+            {month: 'Tháng 5', production: 7332, tappings: 9165, efficiency: 0.80, productivity: 52, target: 106},
+            {month: 'Tháng 6', production: 6977, tappings: 8721, efficiency: 0.80, productivity: 49, target: 101}
+        ];
+        
+        const monthlyGroupData = [
+            {group: 'Tổ 1', month1: 850, month2: 950, month3: 920, month4: 930, month5: 980, month6: 920},
+            {group: 'Tổ 2', month1: 820, month2: 910, month3: 890, month4: 895, month5: 940, month6: 880},
+            {group: 'Tổ 3', month1: 780, month2: 870, month3: 850, month4: 860, month5: 900, month6: 840},
+            {group: 'Tổ 4', month1: 750, month2: 840, month3: 820, month4: 830, month5: 870, month6: 810},
+            {group: 'Tổ 5', month1: 720, month2: 800, month3: 780, month4: 790, month5: 830, month6: 770},
+            {group: 'Tổ 6', month1: 690, month2: 770, month3: 750, month4: 760, month5: 800, month6: 740},
+            {group: 'Tổ 7', month1: 660, month2: 740, month3: 720, month4: 730, month5: 770, month6: 710},
+            {group: 'Tổ 8', month1: 630, month2: 700, month3: 680, month4: 690, month5: 730, month6: 670},
+            {group: 'Tổ 9', month1: 570, month2: 650, month3: 641, month4: 654, month5: 682, month6: 647}
+        ];
+        
+        const staffData = [
+            {name: 'Nguyễn Văn A', group: 1, tappings: 2150, production: 15680, efficiency: 7.29, status: 'Xuất Sắc'},
+            {name: 'Trần Thị B', group: 1, tappings: 2050, production: 15120, efficiency: 7.37, status: 'Xuất Sắc'},
+            {name: 'Phạm Văn C', group: 2, tappings: 1950, production: 14280, efficiency: 7.32, status: 'Xuất Sắc'},
+            {name: 'Hoàng Thị D', group: 2, tappings: 1850, production: 13560, efficiency: 7.33, status: 'Tốt'},
+            {name: 'Vũ Văn E', group: 3, tappings: 1750, production: 12810, efficiency: 7.32, status: 'Tốt'},
+            {name: 'Dương Thị F', group: 3, tappings: 1680, production: 12312, efficiency: 7.33, status: 'Tốt'},
+            {name: 'Lý Văn G', group: 4, tappings: 1620, production: 11880, efficiency: 7.33, status: 'Tốt'},
+            {name: 'Bùi Thị H', group: 4, tappings: 1550, production: 11350, efficiency: 7.32, status: 'Bình Thường'},
+            {name: 'Tô Văn I', group: 5, tappings: 1480, production: 10816, efficiency: 7.31, status: 'Bình Thường'}
+        ];
+        // Register DataLabels plugin for Chart.js (used for +/- labels on bar charts)
+        if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+        }
+        
+        // ===== FUNCTIONS =====
+        function switchTab(index) {
+            const tabs = document.querySelectorAll('.tab-button');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+            contents.forEach((content, i) => {
+                content.classList.toggle('active', i === index);
+            });
+        }
+        
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+        
+        function getHeatmapColor(value) {
+            if (value >= 750) return '#a5d6a7';
+            if (value >= 700) return '#c8e6c9';
+            if (value >= 650) return '#fff9c4';
+            if (value >= 600) return '#ffe0b2';
+            return '#ffcccc';
+        }
+        
+        function initLotSelector() {
+            const selector = document.getElementById('lotSelector');
+            selector.innerHTML = '';
+            lotData.forEach(lot => {
+                const option = document.createElement('option');
+                option.value = lot.name;
+                option.textContent = `${lot.name} (Khu ${lot.area}, Tổ ${lot.group})`;
+                selector.appendChild(option);
+            });
+            updateLotDetail();
+        }
+        
+        function updateLotDetail() {
+            const lotName = document.getElementById('lotSelector').value;
+            const lot = lotData.find(l => l.name === lotName);
+            
+            if (!lot) return;
+            
+            const html = `
+                <div class="detail-card">
+                    <div class="detail-label">Tên Lô</div>
+                    <div class="detail-value">${lot.name}</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">Khu Vực</div>
+                    <div class="detail-value">${lot.area}</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">Tổ</div>
+                    <div class="detail-value">${lot.group}</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">Diện Tích</div>
+                    <div class="detail-value">${lot.areaHa.toFixed(1)}</div>
+                    <div class="detail-unit">ha</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">Số Cây</div>
+                    <div class="detail-value">${formatNumber(lot.trees)}</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">Dòng Cây</div>
+                    <div class="detail-value">${lot.clonevar}</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">Tuổi Cao Su</div>
+                    <div class="detail-value">2</div>
+                    <div class="detail-unit">năm</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">Sản Lượng</div>
+                    <div class="detail-value">${formatNumber(lot.production)}</div>
+                    <div class="detail-unit">kg</div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">kg/ha</div>
+                    <div class="detail-value">${Math.round(lot.production / lot.areaHa)}</div>
+                </div>
+            `;
+            
+            document.getElementById('lotDetailInfo').innerHTML = html;
+        }
+        
+        function populateStaffTable() {
+            const html = staffData.map((staff, idx) => {
+                let statusClass = 'status-excellent';
+                if (staff.status === 'Tốt') statusClass = 'status-good';
+                else if (staff.status === 'Bình Thường') statusClass = 'status-fair';
+                
+                const bgColor = idx === 0 ? 'rgba(212, 237, 218, 0.5)' : idx === 1 ? 'rgba(207, 226, 255, 0.5)' : '';
+                return `
+                    <tr ${bgColor ? `style="background-color: ${bgColor};"` : ''}>
+                        <td>${staff.name}</td>
+                        <td>${staff.group}</td>
+                        <td>${formatNumber(staff.tappings)}</td>
+                        <td>${formatNumber(staff.production)}</td>
+                        <td>${staff.efficiency.toFixed(2)}</td>
+                        <td class="${statusClass}">${staff.status}</td>
+                    </tr>
+                `;
+            }).join('');
+            document.getElementById('staffTableBody').innerHTML = html;
+        }
+        
+        function createStaffChart() {
+            // Show the top 4 staff for a more compact chart
+            const topStaff = staffData.slice(0, 4);
+            new Chart(document.getElementById('staffProductionChart'), {
+                type: 'bar',
+                data: {
+                    labels: topStaff.map(s => s.name),
+                    datasets: [{
+                        label: 'Sản Lượng (kg)',
+                        data: topStaff.map(s => s.production),
+                        backgroundColor: '#1a472a',
+                        borderColor: '#1a472a',
+                        borderWidth: 1,
+                        barThickness: 14,
+                        maxBarThickness: 20
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {display: false}},
+                    layout: {padding: {top: 6, bottom: 6, left: 6, right: 6}},
+                    scales: {
+                        x: {beginAtZero: true, ticks: {font: {size: 11}}},
+                        y: {ticks: {font: {size: 12}, autoSkip: false}}
+                    }
+                }
+            });
+        }
+        
+        function populateStaffCards() {
+            const container = document.getElementById('staffContainer');
+            const html = staffData.map(staff => {
+                let statusClass = 'status-excellent';
+                if (staff.status === 'Tốt') statusClass = 'status-good';
+                else if (staff.status === 'Bình Thường') statusClass = 'status-fair';
+                
+                return `
+                    <div class="chart-container">
+                        <div class="staff-card">
+                            <div class="staff-name">👤 ${staff.name}</div>
+                            <div class="staff-stat">
+                                <span>Tổ:</span>
+                                <strong>${staff.group}</strong>
+                            </div>
+                            <div class="staff-stat">
+                                <span>Tổng Nhát:</span>
+                                <strong>${formatNumber(staff.tappings)}</strong>
+                            </div>
+                            <div class="staff-stat">
+                                <span>Sản Lượng:</span>
+                                <strong>${formatNumber(staff.production)} kg</strong>
+                            </div>
+                            <div class="staff-stat">
+                                <span>Hiệu Suất:</span>
+                                <strong>${staff.efficiency} kg/nhát</strong>
+                            </div>
+                            <div class="staff-stat">
+                                <span>Đánh Giá:</span>
+                                <strong class="${statusClass}">${staff.status}</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        function calculateKPIs() {
+            let totalProduction = 0, totalArea = 0, totalTrees = 0;
+            let totalTappings = 0;
+            
+            lotData.forEach(lot => {
+                totalProduction += lot.production;
+                totalArea += lot.areaHa;
+                totalTrees += lot.trees;
+                totalTappings += lot.tappings;
+            });
+            
+            const productivity = Math.round(totalProduction / totalArea);
+            const efficiency = (totalProduction / totalTappings).toFixed(2);
+            const perTree = (totalProduction / totalTrees).toFixed(2);
+            
+            document.getElementById('kpi-total').textContent = formatNumber(Math.round(totalProduction / 1000));
+            document.getElementById('kpi-area').textContent = formatNumber(totalArea.toFixed(1));
+            document.getElementById('kpi-trees').textContent = formatNumber(totalTrees);
+            document.getElementById('kpi-productivity').textContent = formatNumber(productivity);
+            document.getElementById('kpi-efficiency').textContent = efficiency.replace('.', ',');
+            document.getElementById('kpi-pertree').textContent = perTree.replace('.', ',');
+
+            // Also populate KPI deltas (compared to previous month when available)
+            populateKPIDeltas();
+        }
+
+        function populateKPIDeltas() {
+            if (!monthlyData || monthlyData.length < 2) return;
+            const prev = monthlyData[monthlyData.length - 2];
+            const curr = monthlyData[monthlyData.length - 1];
+
+            function pctChange(currVal, prevVal) {
+                if (!prevVal || prevVal === 0) return 0;
+                return ((currVal - prevVal) / prevVal) * 100;
+            }
+
+            // Sản Lượng (use monthly production)
+            const prodChange = pctChange(curr.production, prev.production);
+            setKPIDelta('kpi-total-delta', prodChange);
+
+            // Năng Suất
+            const prodtyChange = pctChange(curr.productivity, prev.productivity);
+            setKPIDelta('kpi-productivity-delta', prodtyChange);
+
+            // Hiệu Suất
+            const effChange = pctChange(curr.efficiency, prev.efficiency);
+            setKPIDelta('kpi-efficiency-delta', effChange);
+
+            // Tổng Nhát (tappings) - not shown on KPI cards by default (skip)
+
+            // TB/Cây (kg/cây) compute per-tree based on monthly production / total trees
+            const totalTrees = lotData.reduce((s, l) => s + l.trees, 0);
+            const currPerTree = totalTrees ? curr.production / totalTrees : 0;
+            const prevPerTree = totalTrees ? prev.production / totalTrees : 0;
+            const perTreeChange = pctChange(currPerTree, prevPerTree);
+            setKPIDelta('kpi-pertree-delta', perTreeChange);
+
+            // Area doesn't change often — leave empty or show 0
+            document.getElementById('kpi-area-delta').textContent = '';
+        }
+
+        function setKPIDelta(elId, value) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            const val = Number(value);
+            if (isNaN(val) || Math.abs(val) < 0.05) { el.textContent = '0.0%'; el.className = 'kpi-delta'; return; }
+            const cls = val > 0 ? 'kpi-delta up' : 'kpi-delta down';
+            const arrow = val > 0 ? '▲' : '▼';
+            el.innerHTML = `${arrow} ${Math.abs(val).toFixed(1)}%`;
+            el.className = cls;
+        }
+        
+        function createHeatmap() {
+            const body = document.getElementById('heatmapBody');
+            body.innerHTML = '';
+            
+            heatmapData.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>Tổ ${rowIndex + 1}</td>`;
+                
+                row.forEach(value => {
+                    const td = document.createElement('td');
+                    td.className = 'heatmap-cell';
+                    td.style.backgroundColor = getHeatmapColor(value);
+                    td.textContent = value;
+                    tr.appendChild(td);
+                });
+                
+                body.appendChild(tr);
+            });
+        }
+        
+        function populateGroupTable() {
+            const groups = {};
+            lotData.forEach(lot => {
+                if (!groups[lot.group]) {
+                    groups[lot.group] = {count: 0, trees: 0, production: 0, area: 0, tappings: 0};
+                }
+                groups[lot.group].count++;
+                groups[lot.group].trees += lot.trees;
+                groups[lot.group].production += lot.production;
+                groups[lot.group].area += lot.areaHa;
+                groups[lot.group].tappings += lot.tappings;
+            });
+            
+            const sorted = Object.entries(groups).sort((a, b) => b[1].production - a[1].production);
+            const html = sorted.map(([groupNum, data], idx) => {
+                let status = 'status-excellent';
+                if (idx > 2) status = 'status-good';
+                const bgColor = idx === 0 ? 'rgba(212, 237, 218, 0.5)' : idx === 1 ? 'rgba(207, 226, 255, 0.5)' : idx === 2 ? 'rgba(255, 243, 205, 0.5)' : '';
+                return `
+                    <tr ${bgColor ? `style="background-color: ${bgColor};"` : ''}>
+                        <td>Tổ ${groupNum}</td>
+                        <td>${data.count}</td>
+                        <td>${formatNumber(data.trees)}</td>
+                        <td>${data.area.toFixed(1)}</td>
+                        <td>${formatNumber(data.tappings)}</td>
+                        <td>${formatNumber(data.production)}</td>
+                        <td>${Math.round(data.production / data.area)}</td>
+                        <td>${(data.production / data.trees).toFixed(2)}</td>
+                        <td class="${status}">${idx === 0 ? 'Tốt Nhất' : idx === 1 ? 'Tốt' : 'Bình Thường'}</td>
+                    </tr>
+                `;
+            }).join('');
+            document.getElementById('groupTableBody').innerHTML = html;
+        }
+        
+        // Removed: populateMonthlyHistoryTable() — replaced by efficiency table and weekly staff table
+        
+        function populateLotTable() {
+            const sorted = [...lotData].sort((a, b) => b.production - a.production);
+            const html = sorted.slice(0, 10).map((lot, idx) => {
+                let icon = '📦';
+                let ranking = 'Bình thường';
+                let bgColor = '';
+                
+                if (idx === 0) {
+                    icon = '🥇';
+                    ranking = 'Tốt Nhất';
+                    bgColor = 'rgba(212, 237, 218, 0.5)';
+                } else if (idx === 1) {
+                    icon = '🥈';
+                    ranking = 'Tốt';
+                    bgColor = 'rgba(207, 226, 255, 0.5)';
+                } else if (idx === 2) {
+                    icon = '🥉';
+                    ranking = 'Xuất sắc';
+                    bgColor = 'rgba(255, 243, 205, 0.5)';
+                } else if (idx < 5) {
+                    icon = '⭐';
+                    ranking = 'Tốt';
+                } else {
+                    icon = '✓';
+                    ranking = 'Bình thường';
+                }
+                
+                return `
+                    <tr style="background-color: ${bgColor};">
+                        <td>${icon} ${lot.name}</td>
+                        <td>${formatNumber(lot.production)}</td>
+                        <td>${lot.areaHa.toFixed(1)}</td>
+                        <td>${formatNumber(lot.trees)}</td>
+                        <td>${Math.round(lot.production / lot.areaHa)}</td>
+                        <td>${(lot.production / lot.trees).toFixed(2)}</td>
+                        <td>${(lot.production / (lot.tappings || 1)).toFixed(2)}</td>
+                        <td class="status-excellent">${ranking}</td>
+                    </tr>
+                `;
+            }).join('');
+            document.getElementById('lotTableBody').innerHTML = html;
+        }
+        
+        function populateCloneTable() {
+            const clones = {};
+            lotData.forEach(lot => {
+                if (!clones[lot.clonevar]) {
+                    clones[lot.clonevar] = {count: 0, trees: 0, production: 0, area: 0, tappings: 0};
+                }
+                clones[lot.clonevar].count++;
+                clones[lot.clonevar].trees += lot.trees;
+                clones[lot.clonevar].production += lot.production;
+                clones[lot.clonevar].area += lot.areaHa;
+                clones[lot.clonevar].tappings += lot.tappings;
+            });
+            
+            const sorted = Object.entries(clones).sort((a, b) => b[1].production - a[1].production);
+            const html = sorted.map(([name, data], idx) => {
+                let status = 'status-excellent';
+                if (idx > 0) status = 'status-good';
+                return `
+                    <tr>
+                        <td>${name}</td>
+                        <td>${data.count}</td>
+                        <td>${formatNumber(data.trees)}</td>
+                        <td>${data.area.toFixed(1)}</td>
+                        <td>${formatNumber(data.tappings)}</td>
+                        <td>${formatNumber(data.production)}</td>
+                        <td>${Math.round(data.production / data.area)}</td>
+                        <td>${(data.production / data.trees).toFixed(2)}</td>
+                        <td class="${status}">${idx === 0 ? 'Tốt' : 'Bình Thường'}</td>
+                    </tr>
+                `;
+            }).join('');
+            document.getElementById('cloneTableBody').innerHTML = html;
+        }
+        
+        function populateAreaTable() {
+            const areas = {};
+            lotData.forEach(lot => {
+                if (!areas[lot.area]) {
+                    areas[lot.area] = {count: 0, areaHa: 0, production: 0, trees: 0};
+                }
+                areas[lot.area].count++;
+                areas[lot.area].areaHa += lot.areaHa;
+                areas[lot.area].production += lot.production;
+                areas[lot.area].trees += lot.trees;
+            });
+            
+            const html = Object.keys(areas).sort((a, b) => a - b).map(areaNum => {
+                const data = areas[areaNum];
+                return `
+                    <tr>
+                        <td>Khu Vực ${areaNum}</td>
+                        <td>${data.count}</td>
+                        <td>${data.areaHa.toFixed(1)}</td>
+                        <td>${formatNumber(data.production)}</td>
+                        <td>${Math.round(data.production / data.areaHa)}</td>
+                        <td>${(data.production / data.trees).toFixed(2)}</td>
+                    </tr>
+                `;
+            }).join('');
+            document.getElementById('areaTableBody').innerHTML = html;
+        }
+        
+        function populateMonthlyTable() {
+            const totalArea = lotData.reduce((s, l) => s + l.areaHa, 0);
+            const totalTrees = lotData.reduce((s, l) => s + l.trees, 0);
+
+            const html = monthlyData.map(month => {
+                // Use month.production and month.tappings (already present in monthlyData)
+                const prod = Number(month.production) || 0;
+                const taps = Number(month.tappings) || 0;
+                const kgHa = totalArea ? Math.round(prod / totalArea) : 0;
+                const kgTree = totalTrees ? (prod / totalTrees).toFixed(2) : '0.00';
+                const kgTap = taps ? (prod / taps).toFixed(2) : '0.00';
+                return `
+                    <tr>
+                        <td><strong>${month.month}</strong></td>
+                        <td>${formatNumber(prod)}</td>
+                        <td>${totalArea.toFixed(1)}</td>
+                        <td>${formatNumber(totalTrees)}</td>
+                        <td>${kgHa}</td>
+                        <td style="color: ${month.target >= 100 ? '#2e7d32' : '#c62828'}">${month.productivity}</td>
+                        <td>${formatNumber(taps)}</td>
+                        <td>${kgTap}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const el = document.getElementById('monthlyHistoryTableBody');
+            if (el) el.innerHTML = html;
+        }
+        
+        function populateMonthlyGroupTable() {
+            // Replaced by weekly staff table implementation (populateWeeklyStaffTable)
+        }
+
+        function populateWeeklyStaffTable() {
+            // Build weekly data for each staff based on their production divided by 6 with small variation
+            // First compute global min/max across all generated week values for scaling
+            const allWeeks = staffData.flatMap((s, idx) => {
+                const base = s.production / 6;
+                return [
+                    Math.round(base * (0.9 + (idx % 3) * 0.03)),
+                    Math.round(base * (0.95 + (idx % 2) * 0.02)),
+                    Math.round(base * (1.0 + (idx % 4) * 0.01)),
+                    Math.round(base * (1.02 + (idx % 5) * 0.01)),
+                    Math.round(base * (0.98 + (idx % 3) * 0.02)),
+                    Math.round(base * (1.01 + (idx % 2) * 0.01))
+                ];
+            });
+            const minW = Math.min(...allWeeks);
+            const maxW = Math.max(...allWeeks);
+
+            function cellBg(value) {
+                if (maxW === minW) return '';
+                const t = (value - minW) / (maxW - minW);
+                // interpolate between light red (low) and light green (high)
+                const r1 = 255, g1 = 235, b1 = 235; // low (#ffeBeB)
+                const r2 = 229, g2 = 244, b2 = 229; // high (#e5f4e5)
+                const r = Math.round(r1 + (r2 - r1) * t);
+                const g = Math.round(g1 + (g2 - g1) * t);
+                const b = Math.round(b1 + (b2 - b1) * t);
+                return `background-color: rgb(${r}, ${g}, ${b});`;
+            }
+
+            const html = staffData.map((s, idx) => {
+                const base = s.production / 6;
+                const weeks = [
+                    Math.round(base * (0.9 + (idx % 3) * 0.03)),
+                    Math.round(base * (0.95 + (idx % 2) * 0.02)),
+                    Math.round(base * (1.0 + (idx % 4) * 0.01)),
+                    Math.round(base * (1.02 + (idx % 5) * 0.01)),
+                    Math.round(base * (0.98 + (idx % 3) * 0.02)),
+                    Math.round(base * (1.01 + (idx % 2) * 0.01))
+                ];
+                const avg = Math.round(weeks.reduce((a,b)=>a+b,0)/6);
+                const bgColor = idx % 2 === 0 ? 'rgba(245,249,245,0.6)' : '';
+                // color cells conditionally and add avg bar
+                const weekCells = weeks.map(w => `<td class="week-cell" style="${cellBg(w)}">${w}</td>`).join('');
+                const avgBarPercent = maxW === 0 ? 0 : Math.round((avg / maxW) * 100);
+                const avgBarHtml = `<div class="avg-bar"><div class="avg-fill" style="width:${avgBarPercent}%"></div></div><small>${avg}</small>`;
+                return `
+                    <tr ${bgColor ? `style="background-color: ${bgColor};"` : ''}>
+                        <td><strong>${s.name}</strong></td>
+                        ${weekCells}
+                        <td>${avgBarHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+            const el = document.getElementById('weeklyStaffTableBody');
+            if (el) el.innerHTML = html;
+        }
+
+        // Removed: populateEfficiencyTable() — replaced by combo chart for efficiency
+
+        // Footer percent-change logic removed (per user request)
+        
+        function createCharts() {
+            // Monthly Comparison Chart
+            new Chart(document.getElementById('monthlyComparisonChart'), {
+                type: 'bar',
+                data: {
+                    labels: monthlyData.map(m => m.month),
+                    datasets: [{
+                        label: 'Sản Lượng (kg)',
+                        data: monthlyData.map(m => m.production),
+                        backgroundColor: '#1a472a',
+                        borderColor: '#1a472a',
+                        borderWidth: 1
+                    }, {
+                        // Kế hoạch (inferred from production / (target%))
+                        type: 'line',
+                        label: 'Kế Hoạch (kg)',
+                        data: monthlyData.map(m => Math.round(m.production * (100 / m.target))),
+                        borderColor: '#2196f3',
+                        backgroundColor: 'rgba(33,150,243,0.08)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        fill: false,
+                        borderDash: [6, 4]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {display: true, position: 'top'}},
+                    scales: {y: {beginAtZero: true}}
+                }
+            });
+            
+            // Monthly Productivity Chart
+            new Chart(document.getElementById('monthlyProductivityChart'), {
+                type: 'line',
+                data: {
+                    labels: monthlyData.map(m => m.month),
+                    datasets: [
+                        {
+                            label: 'kg/ha',
+                            data: monthlyData.map(m => m.productivity),
+                            borderColor: '#4caf50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 5,
+                            pointBackgroundColor: '#4caf50',
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'kg/cây',
+                            data: monthlyData.map((m, i) => (0.8 + i * 0.08).toFixed(2)),
+                            borderColor: '#2196f3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 5,
+                            pointBackgroundColor: '#2196f3',
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'g/cc',
+                            data: monthlyData.map((m, i) => (7.2 + i * 0.1).toFixed(2)),
+                            borderColor: '#ff9800',
+                            backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 5,
+                            pointBackgroundColor: '#ff9800',
+                            yAxisID: 'y2'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {display: true, position: 'top'}},
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {display: true, text: 'kg/ha'},
+                            beginAtZero: true
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {display: true, text: 'kg/cây'},
+                            grid: {drawOnChartArea: false},
+                            beginAtZero: true
+                        },
+                        y2: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {display: true, text: 'g/cc'},
+                            grid: {drawOnChartArea: false},
+                            beginAtZero: true,
+                            offset: true
+                        }
+                    }
+                }
+            });
+            
+            // Lot Production Chart (Top 8) with +/- vs previous month labels
+            const lotSorted = [...lotData].sort((a, b) => b.production - a.production).slice(0, 8);
+            // compute ratio previousMonth/thisMonth from monthlyData (last two months)
+            const prevMonthTotal = monthlyData.length >= 2 ? monthlyData[monthlyData.length - 2].production : null;
+            const currMonthTotal = monthlyData.length >= 1 ? monthlyData[monthlyData.length - 1].production : null;
+            const prevRatio = (prevMonthTotal && currMonthTotal) ? (prevMonthTotal / currMonthTotal) : 1;
+            const deltaValues = lotSorted.map(l => {
+                const prev = Math.round(l.production * prevRatio);
+                const delta = l.production - prev;
+                return {prev, delta};
+            });
+
+            new Chart(document.getElementById('lotProductionChart'), {
+                type: 'bar',
+                data: {
+                    labels: lotSorted.map(l => l.name),
+                    datasets: [{
+                        label: 'Sản Lượng (kg)',
+                        data: lotSorted.map(l => l.production),
+                        backgroundColor: '#1a472a',
+                        borderColor: '#1a472a',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {display: false},
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'right',
+                            offset: 6,
+                            formatter: (value, context) => {
+                                const item = deltaValues[context.dataIndex];
+                                if (!item) return '';
+                                const sign = item.delta >= 0 ? '+' : '';
+                                // format number with thousands separator
+                                return sign + item.delta.toLocaleString('en-US');
+                            },
+                            color: (context) => {
+                                const item = deltaValues[context.dataIndex];
+                                if (!item) return '#333';
+                                return item.delta >= 0 ? '#4caf50' : '#f44336';
+                            },
+                            font: {weight: '600'},
+                        }
+                    },
+                    scales: {x: {beginAtZero: true}}
+                }
+            });
+            
+            // Clone Production Chart
+            const clones = {};
+            lotData.forEach(lot => {
+                if (!clones[lot.clonevar]) clones[lot.clonevar] = 0;
+                clones[lot.clonevar] += lot.production;
+            });
+            
+            new Chart(document.getElementById('cloneProductionChart'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(clones),
+                    datasets: [{
+                        label: 'Sản Lượng (kg)',
+                        data: Object.values(clones),
+                        backgroundColor: ['#4caf50', '#2196f3', '#ff9800', '#f44336'],
+                        borderColor: '#1a472a',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {display: false}},
+                    scales: {y: {beginAtZero: true}}
+                }
+            });
+            
+            // Monthly Production Chart
+            new Chart(document.getElementById('detailMonthlyProductionChart'), {
+                type: 'bar',
+                data: {
+                    labels: monthlyData.map(m => m.month),
+                    datasets: [{
+                        label: 'Sản Lượng (kg)',
+                        data: monthlyData.map(m => m.production),
+                        backgroundColor: '#1a472a',
+                        borderColor: '#1a472a',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {display: false}},
+                    scales: {y: {beginAtZero: true}}
+                }
+            });
+            
+            // Detail: Monthly Productivity Chart (multi-line like overview)
+            new Chart(document.getElementById('detailMonthlyProductivityChart'), {
+                type: 'line',
+                data: {
+                    labels: monthlyData.map(m => m.month),
+                    datasets: [
+                        {
+                            label: 'kg/ha',
+                            data: monthlyData.map(m => m.productivity),
+                            borderColor: '#4caf50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#4caf50',
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'kg/cây',
+                            data: monthlyData.map((m, i) => (0.8 + i * 0.08).toFixed(2)),
+                            borderColor: '#2196f3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#2196f3',
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'g/cc',
+                            data: monthlyData.map((m, i) => (7.2 + i * 0.1).toFixed(2)),
+                            borderColor: '#ff9800',
+                            backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#ff9800',
+                            yAxisID: 'y2'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {display: true, position: 'top'}},
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {display: true, text: 'kg/ha'},
+                            beginAtZero: true,
+                            max: 70
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {display: true, text: 'kg/cây'},
+                            grid: {drawOnChartArea: false},
+                            beginAtZero: true,
+                            max: 1.4
+                        },
+                        y2: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {display: true, text: 'g/cc'},
+                            grid: {drawOnChartArea: false},
+                            beginAtZero: true,
+                            max: 9,
+                            offset: true
+                        }
+                    }
+                }
+            });
+            
+            // Detail Efficiency: combined chart — Bars for Số Nhát (tappings), Line for kg/nhát
+            new Chart(document.getElementById('detailMonthlyEfficiencyChart'), {
+                type: 'bar',
+                data: {
+                    labels: monthlyData.map(m => m.month),
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Số Nhát',
+                            data: monthlyData.map(m => m.tappings),
+                            backgroundColor: 'rgba(66,133,244,0.9)'
+                        },
+                        {
+                            type: 'line',
+                            label: 'kg/nhát',
+                            data: monthlyData.map(m => (m.production / (m.tappings || 1)).toFixed(2)),
+                            borderColor: '#f44336',
+                            backgroundColor: 'rgba(244,67,54,0.08)',
+                            tension: 0.3,
+                            yAxisID: 'y1',
+                            pointRadius: 5,
+                            borderWidth: 2,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {legend: {display: true, position: 'top'}},
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {display: true, text: 'Số Nhát'},
+                            beginAtZero: true
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {display: true, text: 'kg/nhát'},
+                            grid: {drawOnChartArea: false},
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // ===== INIT =====
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            document.getElementById('timestamp').textContent = now.toLocaleString('vi-VN');
+            
+            calculateKPIs();
+            createHeatmap();
+            populateLotTable();
+            populateMonthlyTable();
+            populateWeeklyStaffTable();
+            initLotSelector();
+            populateStaffTable();
+            createCharts();
+            createStaffChart();
+        });
+    </script>
+</body>
+</html>
